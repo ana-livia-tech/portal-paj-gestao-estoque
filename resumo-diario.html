@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resumo diário de estoque</title>
+<style>
+
+:root{font-family:Arial,Helvetica,sans-serif;color:#102748;background:#f2f5f8}
+*{box-sizing:border-box}
+body{margin:0;padding:22px;background:#f2f5f8}
+main{max-width:850px;margin:0 auto;background:#fff;border:1px solid #dfe7ef;border-radius:14px;overflow:hidden;box-shadow:0 14px 36px rgba(16,39,72,.08)}
+header{background:linear-gradient(115deg,#102748,#173b68);color:#fff;padding:22px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+h1{font-size:23px;margin:0}
+.languages{display:flex;gap:4px;padding:4px;background:#eaf0f6;border-radius:10px}
+.languages button{background:transparent;color:#52677f;padding:9px 12px;font-size:12px;font-weight:500}
+.languages button.active{background:#fff;color:#102748;box-shadow:0 1px 4px #0002}
+header .languages{flex-shrink:0}
+section{padding:20px 24px}
+label{display:block;font-weight:700;font-size:13px;margin:0 0 7px;color:#102748}
+input,textarea{width:100%;border:1px solid #cbd7e3;border-radius:8px;padding:11px;font:inherit;font-size:14px;background:#fff;color:#172033}
+input:focus,textarea:focus{outline:2px solid #22c5e8;outline-offset:1px}
+textarea{min-height:68px;resize:vertical}
+.field{margin-bottom:16px}
+.hint{font-size:12px;color:#64758b;margin-top:5px}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}
+button{border:0;border-radius:8px;padding:11px 15px;font-weight:700;cursor:pointer;font-size:14px}
+.primary{background:#102748;color:#fff}.secondary{background:#22c5e8;color:#102748}
+.preview{background:#f2f5f8;border:1px solid #dfe7ef;border-radius:10px;padding:17px;white-space:pre-wrap;line-height:1.5;font-size:14px;min-height:160px;color:#102748}
+.small{font-size:12px;color:#64758b}
+@media(max-width:600px){body{padding:8px}header,section{padding:17px}h1{font-size:20px}}
+
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1 id="pageTitle">Resumo diário de estoque</h1>
+<nav class="languages" aria-label="Language">
+<button type="button" class="" data-lang="de">Deutsch</button>
+<button type="button" data-lang="en">English</button>
+<button type="button" data-lang="pt" class="active">Português (Brasil)</button>
+</nav>
+</header>
+<section>
+<div class="field">
+<label for="date" data-i18n="date">DATA</label>
+<input id="date" type="date">
+</div>
+<div class="field">
+<label for="sales" data-i18n="sales">VENDAS / PEDIDOS</label>
+<textarea id="sales" data-placeholder="salesPh" placeholder="Ex.: Salind 11 4G — em preparação
+Salind 20 4G — em processamento"></textarea>
+
+</div>
+<div class="field">
+<label for="returns" data-i18n="returns">DEVOLUÇÕES EM ANDAMENTO</label>
+<textarea id="returns" data-placeholder="returnsPh" placeholder="Ex.: Salind 11 4G — a caminho do centro de distribuição"></textarea>
+<div class="hint" data-i18n="returnsHint">Informe o status logístico. Devolução em trânsito não altera o estoque local.</div>
+</div>
+<div class="field">
+<label for="received" data-i18n="received">DEVOLUÇÕES RECEBIDAS E CONTABILIZADAS NO ESTOQUE LOCAL</label>
+<textarea id="received" data-placeholder="receivedPh" placeholder="Ex.: Salind 20 4G — recebida e adicionada ao estoque local"></textarea>
+<div class="hint" data-i18n="receivedHint">Preencha somente quando o produto chegou e foi contabilizado localmente.</div>
+</div>
+<div class="field">
+<label for="local" data-i18n="local">OUTRAS ALTERAÇÕES NO ESTOQUE LOCAL (opcional)</label>
+<textarea id="local" data-placeholder="localPh" placeholder="Ex.: Salind 01 4G — ajuste de +2 unidades"></textarea>
+</div>
+<div class="actions">
+<button class="primary" id="generate" data-i18n="generate">Gerar mensagem</button>
+<button class="secondary" id="copy" data-i18n="copy">Copiar mensagem</button>
+<button class="secondary" id="save" data-i18n="save">Salvo!</button>
+<button class="secondary" id="download" data-i18n="download">Baixar HTML</button>
+</div>
+<p class="small" data-i18n="tip">Dica: use frases curtas e objetivas. Se uma seção não tiver alterações, ela será omitida da mensagem.</p>
+</section>
+
+</main>
+<script>
+const $ = id => document.getElementById(id);
+let currentLang = 'de';
+const translations = {
+ pt: {
+  title:'Resumo diário de estoque', date:'DATA', sales:'VENDAS / PEDIDOS',
+  salesPh:'Ex.: Salind 11 4G — em preparação\nSalind 20 4G — em processamento',
+  returns:'DEVOLUÇÕES EM ANDAMENTO', returnsPh:'Ex.: Salind 11 4G — a caminho do centro de distribuição',
+  returnsHint:'Informe o status logístico. Devolução em trânsito não altera o estoque local.',
+  received:'DEVOLUÇÕES RECEBIDAS E CONTABILIZADAS NO ESTOQUE LOCAL',
+  receivedPh:'Ex.: Salind 20 4G — recebida e adicionada ao estoque local',
+  receivedHint:'Preencha somente quando o produto chegou e foi contabilizado localmente.',
+  local:'OUTRAS ALTERAÇÕES NO ESTOQUE LOCAL (opcional)',
+  localPh:'Ex.: Salind 01 4G — ajuste de +2 unidades',
+  generate:'Gerar mensagem', copy:'Copiar mensagem', save:'Salvar alterações', download:'Baixar HTML',
+  tip:'Dica: use frases curtas e objetivas. Se uma seção não tiver alterações, ela será omitida da mensagem.',
+  output:'CONTROLE DE ESTOQUE FULL', salesOut:'VENDAS / PEDIDOS',
+  returnsOut:'DEVOLUÇÕES EM ANDAMENTO', receivedOut:'DEVOLUÇÕES RECEBIDAS E CONTABILIZADAS',
+  localOut:'OUTRAS ALTERAÇÕES NO ESTOQUE LOCAL',
+  transit:'(não contabilizar no estoque local enquanto estiver em trânsito)',
+  none:'Sem alterações informadas hoje.', copied:'Copiado!'
+ },
+ en: {
+  title:'Daily stock summary', date:'DATE', sales:'SALES / ORDERS',
+  salesPh:'E.g.: Salind 11 4G — being prepared\nSalind 20 4G — processing',
+  returns:'RETURNS IN PROGRESS', returnsPh:'E.g.: Salind 11 4G — on the way to the distribution center',
+  returnsHint:'Enter the logistics status. A return in transit does not change local stock.',
+  received:'RETURNS RECEIVED AND ADDED TO LOCAL STOCK',
+  receivedPh:'E.g.: Salind 20 4G — received and added to local stock',
+  receivedHint:'Fill in only after the product has arrived and been counted in local stock.',
+  local:'OTHER LOCAL STOCK CHANGES (optional)',
+  localPh:'E.g.: Salind 01 4G — adjustment of +2 units',
+  generate:'Generate message', copy:'Copy message', save:'Save changes', download:'Download HTML',
+  tip:'Keep entries short and clear. Sections without changes will be omitted from the message.',
+  output:'FULL STOCK CONTROL', salesOut:'SALES / ORDERS',
+  returnsOut:'RETURNS IN PROGRESS', receivedOut:'RETURNS RECEIVED AND ADDED TO LOCAL STOCK',
+  localOut:'OTHER LOCAL STOCK CHANGES',
+  transit:'(do not add to local stock while in transit)',
+  none:'No changes entered today.', copied:'Copied!'
+ },
+ de: {
+  title:'Tägliche Bestandsübersicht', date:'DATUM', sales:'VERKÄUFE / BESTELLUNGEN',
+  salesPh:'Bsp.: Salind 11 4G — in Vorbereitung\nSalind 20 4G — in Bearbeitung',
+  returns:'LAUFENDE RÜCKSENDUNGEN', returnsPh:'Bsp.: Salind 11 4G — auf dem Weg zum Verteilzentrum',
+  returnsHint:'Logistikstatus eintragen. Rücksendungen unterwegs verändern den lokalen Bestand nicht.',
+  received:'EINGEGANGENE UND IM LOKALEN BESTAND ERFASSTE RÜCKSENDUNGEN',
+  receivedPh:'Bsp.: Salind 20 4G — eingegangen und im lokalen Bestand erfasst',
+  receivedHint:'Nur ausfüllen, wenn das Produkt eingetroffen und im lokalen Bestand erfasst wurde.',
+  local:'WEITERE ÄNDERUNGEN DES LOKALEN BESTANDS (optional)',
+  localPh:'Bsp.: Salind 01 4G — Korrektur um +2 Stück',
+  generate:'Nachricht erstellen', copy:'Nachricht kopieren', save:'Änderungen speichern', download:'HTML herunterladen',
+  tip:'Kurz und eindeutig formulieren. Abschnitte ohne Änderungen werden in der Nachricht ausgelassen.',
+  output:'FULL-BESTANDSKONTROLLE', salesOut:'VERKÄUFE / BESTELLUNGEN',
+  returnsOut:'LAUFENDE RÜCKSENDUNGEN', receivedOut:'EINGEGANGEN UND IM LOKALEN BESTAND ERFASST',
+  localOut:'WEITERE ÄNDERUNGEN DES LOKALEN BESTANDS',
+  transit:'(solange unterwegs nicht zum lokalen Bestand zählen)',
+  none:'Heute keine Änderungen eingetragen.', copied:'Kopiert!'
+ }
+};
+function applyLanguage(lang){
+ currentLang=lang;
+ const t=translations[lang];
+ document.documentElement.lang=lang==='pt'?'pt-BR':lang==='de'?'de':'en';
+ $('pageTitle').textContent=t.title;
+ document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t[el.dataset.i18n]});
+ document.querySelectorAll('[data-placeholder]').forEach(el=>{el.placeholder=t[el.dataset.placeholder]});
+ document.querySelectorAll('[data-lang]').forEach(btn=>btn.classList.toggle('active',btn.dataset.lang===lang));
+ $('copy').textContent=t.copy;
+}
+document.querySelectorAll('[data-lang]').forEach(btn=>btn.addEventListener('click',()=>applyLanguage(btn.dataset.lang)));
+function lines(id){return $(id).value.split(/\n/).map(s=>s.trim()).filter(Boolean)}
+function formatDate(v){
+ if(!v) return new Intl.DateTimeFormat(currentLang==='pt'?'pt-BR':currentLang==='de'?'de-DE':'en-GB').format(new Date());
+ const [y,m,d]=v.split('-'); return `${d}/${m}/${y}`;
+}
+function build(){
+ const t=translations[currentLang];
+ const parts=[`${t.output} — ${formatDate($('date').value)}`];
+ const groups=[
+  [t.salesOut,lines('sales')],
+  [t.returnsOut,lines('returns').map(x=>x+' '+t.transit)],
+  [t.receivedOut,lines('received')],
+  [t.localOut,lines('local')]
+ ];
+ for(const [title,items] of groups){
+  if(items.length) parts.push('',title,...items.map(x=>'• '+x));
+ }
+ if(groups.every(g=>!g[1].length)) parts.push('',t.none);
+ return parts.join('\n');
+}
+$('generate').addEventListener('click',build);
+$('copy').addEventListener('click',async()=>{
+ const msg=build();
+ try{await navigator.clipboard.writeText(msg);$('copy').textContent=translations[currentLang].copied;}
+ catch(e){const area=document.createElement('textarea');area.value=msg;area.style.position='fixed';area.style.opacity='0';document.body.appendChild(area);area.select();document.execCommand('copy');area.remove();$('copy').textContent=translations[currentLang].copied;}
+});
+function collectData(){
+ return {date:$('date').value,sales:$('sales').value,returns:$('returns').value,received:$('received').value,local:$('local').value,lang:currentLang};
+}
+function applyData(data){
+ if(!data)return;
+ ['date','sales','returns','received','local'].forEach(id=>{if(typeof data[id]==='string')$(id).value=data[id];});
+ if(data.lang&&translations[data.lang])applyLanguage(data.lang);
+}
+const storageKey='resumo_diario_estoque_full_dados_v1';
+$('save').addEventListener('click',()=>{
+ try{
+  localStorage.setItem(storageKey,JSON.stringify(collectData()));
+  $('save').textContent=currentLang==='pt'?'Salvo!':currentLang==='de'?'Gespeichert!':'Saved!';
+ }catch(e){
+  alert(currentLang==='pt'?'O navegador bloqueou o salvamento local. Use “Baixar HTML” para guardar uma cópia com os dados.':currentLang==='de'?'Der Browser hat das lokale Speichern blockiert. Verwenden Sie „HTML herunterladen“, um eine Kopie mit den Daten zu speichern.':'The browser blocked local saving. Use “Download HTML” to save a copy with the data.');
+ }
+});
+$('download').addEventListener('click',()=>{
+ const data=collectData();
+ const escText=value=>String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+ const escAttr=value=>escText(value).replace(/"/g,'&quot;');
+ let savedHtml='<!doctype html>\n'+document.documentElement.outerHTML;
+ savedHtml=savedHtml.replace(/<input id="date" type="date">]*>/,'<input id="date" type="date">');
+ for(const id of ['sales','returns','received','local']){
+  const pattern=new RegExp('(<textarea id="'+id+'"[^>]*>)[\\s\\S]*?(</textarea>)');
+  savedHtml=savedHtml.replace(pattern,(match,opening,closing)=>opening+escText(data[id])+closing);
+ }
+ savedHtml=savedHtml.replace("applyLanguage('pt');","applyLanguage('"+data.lang+"');");
+ savedHtml=savedHtml.replace("if(!$('date').value){$('date').value=new Date().toLocaleDateString('en-CA');}","if(!$('date').value){$('date').value=new Date().toLocaleDateString('en-CA');}");
+ const blob=new Blob([savedHtml],{type:'text/html;charset=utf-8'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download='resumo_diario_estoque_full.html';document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),1500);
+});
+$('date').value=new Date().toLocaleDateString('en-CA');
+applyLanguage('pt');
+try{const previous=localStorage.getItem('resumo_diario_estoque_full_dados_v1');if(previous)applyData(JSON.parse(previous));}catch(e){}
+</script>
+
+
+</body></html>
